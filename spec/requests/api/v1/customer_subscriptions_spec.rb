@@ -19,11 +19,51 @@ RSpec.describe '/api/v1/customers/:id/subscriptions requests', type: :request do
     describe 'happy path' do
       it 'Can subscribe a customer to a new tea subscription' do
         expect(customer1.subscriptions.count).to eq(2)
-        creation_params = ({tea_id: tea1.id})
+        creation_params = {
+          title: 'Fall Tea Collection',
+          price: '1000',
+          frequency: 4,
+          tea_id: tea1.id
+        }
         post "/api/v1/customers/#{customer1.id}/subscriptions", params: creation_params
 
         expect(response).to be_successful
         expect(customer1.subscriptions.count).to eq(3)
+        response_hash = json[:data]
+        expect(response_hash.keys).to include(:id, :type, :attributes)
+        expect(response_hash.keys.count).to eq(3)
+        attributes = response_hash[:attributes]
+        expect(attributes.keys).to include(
+          :title, :price, :status, :frequency, :customer_id, :tea_id
+        )
+        expect(attributes.keys.count).to eq(6)
+        expect(attributes[:title]).to eq('Fall Tea Collection')
+        expect(attributes[:price]).to eq(1000)
+        expect(attributes[:status]).to eq('active')
+        expect(attributes[:frequency]).to eq(4)
+        expect(attributes[:customer_id]).to eq(customer1.id)
+        expect(attributes[:tea_id]).to eq(tea1.id)
+      end
+    end
+
+    describe 'sad path' do
+      it 'will return an error if necessary information is missing' do
+        expect(customer1.subscriptions.count).to eq(2)
+        creation_params = {
+          title: 'Fall Tea Collection',
+          price: '1000',
+          frequency: 4
+        }
+        post "/api/v1/customers/#{customer1.id}/subscriptions", params: creation_params
+
+        expect(response).to_not be_successful
+        expect(customer1.subscriptions.count).to eq(2)
+        response_hash = json[:data]
+        expect(response_hash.keys).to include(:id, :type, :message)
+        expect(response_hash.keys.count).to eq(3)
+        expect(response_hash[:id]).to eq(nil)
+        expect(response_hash[:type]).to eq('error')
+        expect(response_hash[:message]).to eq('Tea must exist')
       end
     end
   end
