@@ -112,4 +112,53 @@ RSpec.describe '/api/v1/customers/:id/subscriptions requests', type: :request do
       end
     end
   end
+
+  describe "display all of a customer's tea subscriptions" do
+    describe 'happy path' do
+      it "Can display all of a customer's tea subscriptions" do
+        get "/api/v1/customers/#{customer1.id}/subscriptions/"
+
+        expect(response).to be_successful
+        response = json[:data]
+        expect(response).to be_a(Array)
+        expect(response.count).to eq(2)
+        expect(response[0][:attributes][:status]).to eq('active')
+        expect(response[1][:attributes][:status]).to eq('cancelled')
+        response.each do |response_hash|
+          expect(response_hash.keys).to include(:id, :type, :attributes)
+          expect(response_hash.keys.count).to eq(3)
+          attributes = response_hash[:attributes]
+          expect(attributes.keys).to include(
+            :title, :price, :status, :frequency, :customer_id, :tea_id
+          )
+          expect(attributes.keys.count).to eq(6)
+          expect(attributes[:title]).to be_a(String)
+          expect(attributes[:price]).to be_a(Integer)
+          expect(attributes[:status]).to eq('cancelled').or eq('active')
+          expect(attributes[:frequency]).to be_a(Integer)
+          expect(attributes[:customer_id]).to be_a(Integer)
+          expect(attributes[:tea_id]).to be_a(Integer)
+        end
+      end
+    end
+
+    describe 'sad path' do
+      it 'will return an error if ...' do
+        expect(customer2.subscriptions.active.count).to eq(3)
+        expect(customer2.subscriptions.cancelled.count).to eq(0)
+        delete "/api/v1/customers/#{customer2.id}/subscriptions/#{subscription1.id}"
+
+
+        expect(response).to_not be_successful
+        expect(customer2.subscriptions.active.count).to eq(3)
+        expect(customer2.subscriptions.cancelled.count).to eq(0)
+        response_hash = json[:data]
+        expect(response_hash.keys).to include(:id, :type, :message)
+        expect(response_hash.keys.count).to eq(3)
+        expect(response_hash[:id]).to eq(nil)
+        expect(response_hash[:type]).to eq('error')
+        expect(response_hash[:message]).to eq('Customer id and subscription id do not match')
+      end
+    end
+  end
 end
