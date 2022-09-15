@@ -17,15 +17,20 @@ class Api::V1::SubscriptionsController < ApplicationController
     end
   end
 
+  def index
+    subs = current_customer.subscriptions
+    render json: SubscriptionSerializer.format_subscriptions(subs), status: :accepted
+  end
+
   private
 
   # def current_tea
   #   t ||= Tea.find(params[:tea_id])
   # end
 
-  # def current_customer
-  #   u ||= Customer.find(params[:customer_id])
-  # end
+  def current_customer
+    c ||= Customer.find(params[:customer_id])
+  end
 
   def subscription_params
     params.permit(:title, :price, :frequency, :customer_id, :tea_id)
