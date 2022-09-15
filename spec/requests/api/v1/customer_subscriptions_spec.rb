@@ -3,6 +3,7 @@ require 'rails_helper'
 RSpec.describe '/api/v1/customers/:id/subscriptions requests', type: :request do
   let!(:customer1) { Customer.create!(first_name: 'Patrick', last_name: 'Stewart', email: 'ohcaptain@tealover.com', address: '1234 Love Tea Dr, Spilled Tea, TX 12345') }
   let!(:customer2) { Customer.create!(first_name: 'Mister', last_name: 'Tea', email: 'piteathefool@tealover.com', address: '4321 Love Tea Dr, Spilled Tea, TX 12345') }
+  let!(:customer3) { Customer.create!(first_name: 'Ted', last_name: 'Lasso', email: 'not4me@tealover.com', address: '2468 No Love Tea Ct, Spilled Tea, TX 12345') }
   let!(:tea1) { Tea.create!(title: 'Glengettie', description: "Mae'r cyfuniad o flas arbennig ac ansawdd wedi gwneud Glengettie yn ffefryn yng Nghymru ers blynyddoedd lawer.", temperature: 190, brew_time: 300) }
   let!(:tea2) { Tea.create!(title: 'Chai', description: 'Black tea with a mixture of aromatic herbs and spices.', temperature: 200, brew_time: 240) }
   let!(:tea3) { Tea.create!(title: 'Earl Grey', description: 'Tea. Earl grey. Hot.', temperature: 200, brew_time: 240) }
@@ -143,21 +144,16 @@ RSpec.describe '/api/v1/customers/:id/subscriptions requests', type: :request do
     end
 
     describe 'sad path' do
-      it 'will return an error if ...' do
-        expect(customer2.subscriptions.active.count).to eq(3)
-        expect(customer2.subscriptions.cancelled.count).to eq(0)
-        delete "/api/v1/customers/#{customer2.id}/subscriptions/#{subscription1.id}"
-
+      it 'will return an error if customer id does not exist' do
+        get "/api/v1/customers/not_here/subscriptions/"
 
         expect(response).to_not be_successful
-        expect(customer2.subscriptions.active.count).to eq(3)
-        expect(customer2.subscriptions.cancelled.count).to eq(0)
         response_hash = json[:data]
         expect(response_hash.keys).to include(:id, :type, :message)
         expect(response_hash.keys.count).to eq(3)
         expect(response_hash[:id]).to eq(nil)
         expect(response_hash[:type]).to eq('error')
-        expect(response_hash[:message]).to eq('Customer id and subscription id do not match')
+        expect(response_hash[:message]).to eq("Record error: Couldn't find Customer with 'id'=not_here")
       end
     end
   end
