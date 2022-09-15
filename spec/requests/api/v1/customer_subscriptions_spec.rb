@@ -3,6 +3,7 @@ require 'rails_helper'
 RSpec.describe '/api/v1/customers/:id/subscriptions requests', type: :request do
   let!(:customer1) { Customer.create!(first_name: 'Patrick', last_name: 'Stewart', email: 'ohcaptain@tealover.com', address: '1234 Love Tea Dr, Spilled Tea, TX 12345') }
   let!(:customer2) { Customer.create!(first_name: 'Mister', last_name: 'Tea', email: 'piteathefool@tealover.com', address: '4321 Love Tea Dr, Spilled Tea, TX 12345') }
+  let!(:customer3) { Customer.create!(first_name: 'Ted', last_name: 'Lasso', email: 'not4me@tealover.com', address: '2468 No Love Tea Ct, Spilled Tea, TX 12345') }
   let!(:tea1) { Tea.create!(title: 'Glengettie', description: "Mae'r cyfuniad o flas arbennig ac ansawdd wedi gwneud Glengettie yn ffefryn yng Nghymru ers blynyddoedd lawer.", temperature: 190, brew_time: 300) }
   let!(:tea2) { Tea.create!(title: 'Chai', description: 'Black tea with a mixture of aromatic herbs and spices.', temperature: 200, brew_time: 240) }
   let!(:tea3) { Tea.create!(title: 'Earl Grey', description: 'Tea. Earl grey. Hot.', temperature: 200, brew_time: 240) }
@@ -109,6 +110,50 @@ RSpec.describe '/api/v1/customers/:id/subscriptions requests', type: :request do
         expect(response_hash[:id]).to eq(nil)
         expect(response_hash[:type]).to eq('error')
         expect(response_hash[:message]).to eq('Customer id and subscription id do not match')
+      end
+    end
+  end
+
+  describe "display all of a customer's tea subscriptions" do
+    describe 'happy path' do
+      it "Can display all of a customer's tea subscriptions" do
+        get "/api/v1/customers/#{customer1.id}/subscriptions/"
+
+        expect(response).to be_successful
+        response = json[:data]
+        expect(response).to be_a(Array)
+        expect(response.count).to eq(2)
+        expect(response[0][:attributes][:status]).to eq('active')
+        expect(response[1][:attributes][:status]).to eq('cancelled')
+        response.each do |response_hash|
+          expect(response_hash.keys).to include(:id, :type, :attributes)
+          expect(response_hash.keys.count).to eq(3)
+          attributes = response_hash[:attributes]
+          expect(attributes.keys).to include(
+            :title, :price, :status, :frequency, :customer_id, :tea_id
+          )
+          expect(attributes.keys.count).to eq(6)
+          expect(attributes[:title]).to be_a(String)
+          expect(attributes[:price]).to be_a(Integer)
+          expect(attributes[:status]).to eq('cancelled').or eq('active')
+          expect(attributes[:frequency]).to be_a(Integer)
+          expect(attributes[:customer_id]).to be_a(Integer)
+          expect(attributes[:tea_id]).to be_a(Integer)
+        end
+      end
+    end
+
+    describe 'sad path' do
+      it 'will return an error if customer id does not exist' do
+        get "/api/v1/customers/not_here/subscriptions/"
+
+        expect(response).to_not be_successful
+        response_hash = json[:data]
+        expect(response_hash.keys).to include(:id, :type, :message)
+        expect(response_hash.keys.count).to eq(3)
+        expect(response_hash[:id]).to eq(nil)
+        expect(response_hash[:type]).to eq('error')
+        expect(response_hash[:message]).to eq("Record error: Couldn't find Customer with 'id'=not_here")
       end
     end
   end
