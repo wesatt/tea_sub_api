@@ -46,23 +46,76 @@ RSpec.describe '/api/v1/customers/:id/subscriptions requests', type: :request do
     end
 
     describe 'sad path' do
-      it 'will return an error if necessary information is missing' do
-        expect(customer1.subscriptions.count).to eq(2)
+      describe 'will return an error if necessary information is missing' do
+        it 'if missing tea' do
+          expect(customer1.subscriptions.count).to eq(2)
+          missing_tea = {
+            title: 'Fall Tea Collection',
+            price: '1000',
+            frequency: 4
+          }
+          post "/api/v1/customers/#{customer1.id}/subscriptions", params: missing_tea
+
+          expect(response).to_not be_successful
+          expect(customer1.subscriptions.count).to eq(2)
+          response_hash = json[:data]
+          expect(response_hash.keys).to include(:id, :type, :message)
+          expect(response_hash.keys.count).to eq(3)
+          expect(response_hash[:id]).to eq(nil)
+          expect(response_hash[:type]).to eq('error')
+          expect(response_hash[:message]).to eq('Tea must exist')
+        end
+
+        it 'if missing title' do
+          missing_title = {
+            price: '1000',
+            frequency: 4,
+            tea_id: tea1.id
+          }
+          post "/api/v1/customers/#{customer1.id}/subscriptions", params: missing_title
+          expect(response).to_not be_successful
+          expect(json[:data][:message]).to eq("Title can't be blank")
+        end
+
+        it 'if missing price' do
+          missing_price = {
+            title: 'Fall Tea Collection',
+            frequency: 4,
+            tea_id: tea1.id
+          }
+          post "/api/v1/customers/#{customer1.id}/subscriptions", params: missing_price
+          expect(response).to_not be_successful
+          expect(json[:data][:message]).to eq('Price is not a number')
+        end
+
+        it 'if missing frequency' do
+          missing_frequency = {
+            title: 'Fall Tea Collection',
+            price: '1000',
+            tea_id: tea1.id
+          }
+          post "/api/v1/customers/#{customer1.id}/subscriptions", params: missing_frequency
+          expect(response).to_not be_successful
+          expect(json[:data][:message]).to eq('Frequency is not a number')
+        end
+      end
+
+      it 'will return an error if customer does not exist' do
         creation_params = {
           title: 'Fall Tea Collection',
           price: '1000',
-          frequency: 4
+          frequency: 4,
+          tea_id: tea1.id
         }
-        post "/api/v1/customers/#{customer1.id}/subscriptions", params: creation_params
+        post "/api/v1/customers/TMBG/subscriptions", params: creation_params
 
         expect(response).to_not be_successful
-        expect(customer1.subscriptions.count).to eq(2)
         response_hash = json[:data]
         expect(response_hash.keys).to include(:id, :type, :message)
         expect(response_hash.keys.count).to eq(3)
         expect(response_hash[:id]).to eq(nil)
         expect(response_hash[:type]).to eq('error')
-        expect(response_hash[:message]).to eq('Tea must exist')
+        expect(response_hash[:message]).to eq('Customer must exist')
       end
     end
   end
@@ -104,6 +157,28 @@ RSpec.describe '/api/v1/customers/:id/subscriptions requests', type: :request do
         expect(response).to_not be_successful
         expect(customer2.subscriptions.active.count).to eq(3)
         expect(customer2.subscriptions.cancelled.count).to eq(0)
+        response_hash = json[:data]
+        expect(response_hash.keys).to include(:id, :type, :message)
+        expect(response_hash.keys.count).to eq(3)
+        expect(response_hash[:id]).to eq(nil)
+        expect(response_hash[:type]).to eq('error')
+        expect(response_hash[:message]).to eq('Customer id and subscription id do not match')
+      end
+
+      it 'will return an error if customer does not exist' do
+        delete "/api/v1/customers/TMBG/subscriptions/#{subscription1.id}"
+        expect(response).to_not be_successful
+        response_hash = json[:data]
+        expect(response_hash.keys).to include(:id, :type, :message)
+        expect(response_hash.keys.count).to eq(3)
+        expect(response_hash[:id]).to eq(nil)
+        expect(response_hash[:type]).to eq('error')
+        expect(response_hash[:message]).to eq('Customer id and subscription id do not match')
+      end
+
+      it 'will return an error if subscription does not exist' do
+        delete "/api/v1/customers/#{customer2.id}/subscriptions/TMBG"
+        expect(response).to_not be_successful
         response_hash = json[:data]
         expect(response_hash.keys).to include(:id, :type, :message)
         expect(response_hash.keys.count).to eq(3)
